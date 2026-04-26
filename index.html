@@ -65,7 +65,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .nav-item.active::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 2px 2px;}
 .nav-icon{font-size:1.3rem;line-height:1;transition:transform .2s;}
 .nav-item.active .nav-icon{transform:translateY(-1px);}
-.nav-label{font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-family:var(--ui);}
+.nav-label{font-size:.52rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-family:var(--ui);}
 
 /* ── VIEWS ── */
 .view{
@@ -132,8 +132,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .gm-tl{font-size:.52rem;color:var(--muted);font-family:var(--mono);}
 .gm-tv{font-size:.72rem;font-weight:800;font-family:var(--mono);color:var(--accent);}
 
-/* Map controls */
-#map-ctrl{position:absolute;right:10px;top:10px;z-index:20;display:flex;flex-direction:column;gap:6px;}
+/* Map controls — below the HUD strip */
+#map-ctrl{position:absolute;right:10px;top:62px;z-index:20;display:flex;flex-direction:column;gap:6px;}
 .mc-btn{
   width:42px;height:42px;border-radius:var(--r2);border:1px solid var(--border2);
   background:rgba(13,20,32,.88);backdrop-filter:blur(8px);
@@ -184,9 +184,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #fab-close.rdy{background:var(--yellow);color:#000;border-color:var(--yellow);}
 .fab-icon{font-size:1rem;}
 
-/* Area chip on map — floats top-right, below HUD */
+/* Area chip — anchored bottom-right, above the FAB buttons */
 #area-chip{
-  position:absolute;top:62px;right:10px;z-index:20;
+  position:absolute;bottom:148px;right:10px;z-index:20;
   background:rgba(8,12,18,.9);border:1px solid var(--border2);
   border-radius:var(--r2);padding:6px 10px;backdrop-filter:blur(8px);
   text-align:right;min-width:110px;pointer-events:none;
@@ -194,6 +194,117 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .ac-label{font-size:.52rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono);}
 .ac-val{font-size:.9rem;font-weight:800;font-family:var(--mono);color:var(--accent);line-height:1.2;}
 .ac-sub{font-size:.58rem;color:var(--dim);font-family:var(--mono);}
+
+/* ═══════════════════════════════════════════════════
+   GALILEO MODE PANEL
+═══════════════════════════════════════════════════ */
+#galileo-mode-panel{}
+
+#gal-toggle-card{
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:var(--r2);overflow:hidden;
+}
+
+#gal-mode-indicator{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;cursor:default;
+}
+#gal-star{
+  font-size:1.4rem;color:var(--c-gal);flex-shrink:0;
+  transition:all .4s;
+}
+#gal-mode-title{
+  font-size:.82rem;font-weight:700;color:var(--text);line-height:1.2;
+}
+#gal-mode-sub{
+  font-size:.62rem;color:var(--muted);margin-top:2px;font-family:var(--mono);
+}
+
+/* Toggle switch */
+#gal-switch{
+  width:52px;height:28px;border-radius:14px;
+  background:var(--ele2);border:1px solid var(--border2);
+  cursor:pointer;position:relative;transition:all .35s;flex-shrink:0;
+}
+#gal-switch.on{background:var(--c-gal);border-color:var(--c-gal);box-shadow:0 0 12px rgba(123,237,159,.4);}
+#gal-knob{
+  position:absolute;top:3px;left:3px;
+  width:20px;height:20px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.3);
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+}
+#gal-switch.on #gal-knob{transform:translateX(24px);}
+
+/* Galileo info box (hidden by default) */
+#gal-info-box{
+  display:none;
+  border-top:1px solid rgba(123,237,159,.25);
+  background:linear-gradient(135deg,rgba(123,237,159,.06),rgba(0,229,255,.04));
+  padding:12px 14px;
+  animation:gal-in .35s ease;
+}
+#gal-info-box.show{display:block;}
+@keyframes gal-in{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+
+#gal-info-header{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+#gal-info-flag{font-size:1.6rem;flex-shrink:0;}
+#gal-info-title{font-size:.82rem;font-weight:800;color:var(--c-gal);}
+#gal-info-sub{font-size:.6rem;color:var(--muted);margin-top:2px;}
+
+/* Pulse indicator */
+#gal-pulse-wrap{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:20px;}
+#gal-pulse{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--c-gal);box-shadow:0 0 8px var(--c-gal);
+  animation:gal-pulse 1.4s ease-in-out infinite;
+}
+@keyframes gal-pulse{
+  0%,100%{transform:scale(1);opacity:1;}
+  50%{transform:scale(1.5);opacity:.5;}
+}
+
+/* Stats grid inside Galileo info */
+#gal-stats-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;
+}
+.gal-stat{
+  background:rgba(123,237,159,.08);border:1px solid rgba(123,237,159,.2);
+  border-radius:var(--r3);padding:7px 8px;text-align:center;
+}
+.gal-stat-l{font-size:.54rem;text-transform:uppercase;letter-spacing:.08em;color:var(--c-gal);opacity:.7;font-family:var(--mono);}
+.gal-stat-v{font-size:.84rem;font-weight:800;font-family:var(--mono);color:var(--c-gal);margin-top:2px;}
+
+#gal-prn-info{
+  margin-top:8px;padding:6px 8px;
+  background:rgba(0,0,0,.15);border-radius:var(--r3);
+  border-left:3px solid var(--c-gal);
+}
+#gal-note{
+  margin-top:8px;font-size:.68rem;color:var(--dim);line-height:1.65;
+  background:rgba(255,165,2,.07);border:1px solid rgba(255,165,2,.2);
+  border-radius:var(--r3);padding:8px 10px;
+}
+
+/* When Galileo mode is ON — dim other constellation cards */
+.gnss-card.gal-dimmed{
+  opacity:.3;filter:grayscale(.8);
+  transition:opacity .4s,filter .4s;
+}
+.gnss-card.gal-highlighted{
+  border-color:var(--c-gal) !important;
+  box-shadow:0 0 12px rgba(123,237,159,.15);
+  transition:border-color .4s,box-shadow .4s;
+}
+
+/* HUD / signal hero accent when in Galileo mode */
+#sig-hero.gal-mode{
+  border-color:rgba(123,237,159,.4);
+  background:linear-gradient(135deg,rgba(123,237,159,.06),var(--panel));
+}
+
+/* ── END GALILEO CSS ── */
 
 /* ═══════════════════════════════════════════════════
    VIEW 2: DADOS  (coordinates, signal, GNSS detail)
@@ -560,6 +671,75 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         </div>
       </div>
 
+      <!-- ── MODO GALILEO ── -->
+      <div id="galileo-mode-panel">
+        <div class="section-title">Modo de Operação GNSS</div>
+
+        <!-- Toggle card -->
+        <div id="gal-toggle-card">
+          <div id="gal-mode-indicator">
+            <div id="gal-star">✦</div>
+            <div style="flex:1">
+              <div id="gal-mode-title">Multi-Constelação Ativa</div>
+              <div id="gal-mode-sub">GPS + Galileo + GLONASS + BeiDou</div>
+            </div>
+            <!-- Toggle switch -->
+            <div id="gal-switch" onclick="toggleGalileoMode()">
+              <div id="gal-knob"></div>
+            </div>
+          </div>
+
+          <!-- Galileo-only info box (shown only when active) -->
+          <div id="gal-info-box">
+            <div id="gal-info-header">
+              <span id="gal-info-flag">🇪🇺</span>
+              <div>
+                <div id="gal-info-title">Galileo — Operando em modo exclusivo</div>
+                <div id="gal-info-sub">Sistema europeu de navegação por satélite</div>
+              </div>
+              <div id="gal-pulse-wrap"><div id="gal-pulse"></div></div>
+            </div>
+
+            <div id="gal-stats-grid">
+              <div class="gal-stat">
+                <div class="gal-stat-l">Satélites</div>
+                <div class="gal-stat-v" id="gal-sats-live">—</div>
+              </div>
+              <div class="gal-stat">
+                <div class="gal-stat-l">SNR médio</div>
+                <div class="gal-stat-v" id="gal-snr-live">—</div>
+              </div>
+              <div class="gal-stat">
+                <div class="gal-stat-l">Precisão</div>
+                <div class="gal-stat-v" id="gal-acc-live">—</div>
+              </div>
+            </div>
+
+            <!-- Galileo signal quality bar -->
+            <div style="margin-top:8px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+                <span id="gal-quality-label" style="font-size:.58rem;font-family:var(--mono);color:var(--c-gal)">Qualidade do sinal Galileo</span>
+                <span id="gal-quality-pct" style="font-size:.58rem;font-family:var(--mono);color:var(--c-gal)">—</span>
+              </div>
+              <div style="height:6px;background:rgba(123,237,159,.12);border-radius:3px;overflow:hidden">
+                <div id="gal-quality-bar" style="height:100%;border-radius:3px;background:var(--c-gal);width:0%;transition:width .6s ease"></div>
+              </div>
+            </div>
+
+            <!-- PRN info -->
+            <div id="gal-prn-info">
+              <span style="font-size:.56rem;color:var(--muted);font-family:var(--mono)">PRN Galileo: E01–E36 (301–336) · Freq: E1/E5a/E5b/E6 · Serviço: OS/CS/PRS</span>
+            </div>
+
+            <!-- Technical note -->
+            <div id="gal-note">
+              <span style="font-size:.65rem;font-weight:700">⚠️ Nota técnica:</span>
+              A API Geolocation padrão dos navegadores utiliza automaticamente todos os sistemas GNSS disponíveis no receptor do dispositivo — não é possível restringir por software a um único sistema. Este modo <b>prioriza e destaca</b> os dados do Galileo, filtrando a exibição e o relatório de precisão para refletir apenas a contribuição estimada desta constelação.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Lat/Lon + Altitude + Acc grid -->
       <div>
         <div class="section-title">Posição Atual</div>
@@ -780,6 +960,135 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     </div>
   </div><!-- /v-export -->
 
+  <!-- ── VIEW 5: DISTÂNCIA + SOBRE ─────────────────── -->
+  <div class="view" id="v-dist">
+    <div class="view-header">
+      <div><div class="vh-title">📏 Distância entre Pontos</div><div class="vh-sub">Calcule distâncias a partir dos vértices coletados</div></div>
+    </div>
+    <div class="vscroll">
+
+      <!-- Instant distance (current GPS position → selected point) -->
+      <div>
+        <div class="section-title">Distância da Posição Atual</div>
+        <div style="background:linear-gradient(135deg,var(--ele),var(--panel));border:1px solid var(--border2);border-radius:var(--r);padding:14px 16px;box-shadow:var(--glow);">
+          <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono);margin-bottom:6px">Até o ponto selecionado</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <select id="dist-sel-pt" style="flex:1;background:var(--ele2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:.82rem;padding:8px 10px;font-family:var(--ui);outline:none">
+              <option value="">— Selecione um ponto coletado —</option>
+            </select>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:2rem;font-weight:900;font-family:var(--mono);color:var(--accent)" id="dist-to-pt">—</div>
+            <div style="font-size:.7rem;color:var(--dim);margin-top:2px" id="dist-to-pt-sub">Selecione um ponto e aguarde GPS</div>
+          </div>
+          <button onclick="calcDistToPoint()" style="width:100%;margin-top:10px;padding:11px;background:var(--accent);color:#000;border:none;border-radius:var(--r2);font-size:.84rem;font-weight:800;cursor:pointer;font-family:var(--ui)">📍 Calcular Distância</button>
+        </div>
+      </div>
+
+      <!-- Point-to-point distance -->
+      <div>
+        <div class="section-title">Distância entre Dois Pontos</div>
+        <div style="background:var(--panel);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono);margin-bottom:4px">Ponto A</div>
+              <select id="dist-a" style="width:100%;background:var(--ele2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:.8rem;padding:8px 10px;font-family:var(--ui);outline:none">
+                <option value="">— Ponto —</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono);margin-bottom:4px">Ponto B</div>
+              <select id="dist-b" style="width:100%;background:var(--ele2);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:.8rem;padding:8px 10px;font-family:var(--ui);outline:none">
+                <option value="">— Ponto —</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="calcDistAB()" style="width:100%;padding:11px;background:var(--ele);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:.84rem;font-weight:700;cursor:pointer;font-family:var(--ui)">📐 Calcular A → B</button>
+          <!-- Result -->
+          <div id="dist-ab-result" style="display:none;background:var(--ele);border:1px solid var(--border2);border-radius:var(--r2);padding:12px;text-align:center">
+            <div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono)">Distância</div>
+            <div style="font-size:1.8rem;font-weight:900;font-family:var(--mono);color:var(--accent)" id="dist-ab-val">—</div>
+            <div style="font-size:.68rem;color:var(--dim);margin-top:3px" id="dist-ab-detail">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distance matrix — all-pairs -->
+      <div>
+        <div class="section-title">Matriz de Distâncias</div>
+        <div style="background:var(--ele);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px">
+          <button onclick="buildDistMatrix()" style="width:100%;padding:10px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:.82rem;font-weight:700;cursor:pointer;font-family:var(--ui);margin-bottom:8px">🔢 Gerar Matriz Completa</button>
+          <div id="dist-matrix" style="overflow-x:auto;font-size:.58rem;font-family:var(--mono)">
+            <div style="color:var(--muted);text-align:center;padding:12px">Colete ao menos 2 pontos e toque em Gerar Matriz.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Perimeter path -->
+      <div>
+        <div class="section-title">Comprimento do Trajeto</div>
+        <div style="background:var(--ele);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--r2);padding:9px 10px;text-align:center">
+              <div style="font-size:.54rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono)">Trajeto aberto</div>
+              <div style="font-size:.95rem;font-weight:800;font-family:var(--mono);color:var(--accent);margin-top:3px" id="dist-open">— m</div>
+              <div style="font-size:.58rem;color:var(--dim)">(P1 → Pn)</div>
+            </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--r2);padding:9px 10px;text-align:center">
+              <div style="font-size:.54rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono)">Trajeto fechado</div>
+              <div style="font-size:.95rem;font-weight:800;font-family:var(--mono);color:var(--green);margin-top:3px" id="dist-closed">— m</div>
+              <div style="font-size:.58rem;color:var(--dim)">(perímetro)</div>
+            </div>
+          </div>
+          <button onclick="calcPathDistances()" style="width:100%;padding:10px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-size:.82rem;font-weight:700;cursor:pointer;font-family:var(--ui)">🔄 Atualizar</button>
+        </div>
+      </div>
+
+      <!-- ─── SOBRE ─────────────────────────────────── -->
+      <div style="margin-top:6px">
+        <div class="section-title">Sobre o Aplicativo</div>
+        <div style="background:var(--panel);border:1px solid var(--border2);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:2.2rem;flex-shrink:0">🛰️</div>
+            <div>
+              <div style="font-size:.95rem;font-weight:800;color:var(--accent);letter-spacing:.02em">GeoField Pro</div>
+              <div style="font-size:.62rem;color:var(--muted);font-family:var(--mono)">Versão 1.301</div>
+            </div>
+          </div>
+          <div style="font-size:.78rem;color:var(--dim);line-height:1.7;border-top:1px solid var(--border);padding-top:10px">
+            Aplicativo desenvolvido para <b style="color:var(--text)">coleta de dados GNSS</b> e cálculo de <b style="color:var(--text)">áreas e distâncias em campo</b>.
+          </div>
+          <div style="font-size:.78rem;color:var(--dim);line-height:1.7">
+            Utiliza sistemas GNSS <b style="color:var(--text)">multiconstelação</b> (GPS, GLONASS, Galileo e BeiDou), com referência no sistema <b style="color:var(--text)">SIRGAS 2000</b>, incluindo controle de precisão e cálculo de erro médio.
+          </div>
+          <div style="background:var(--ele);border:1px solid var(--border);border-radius:var(--r2);padding:9px 12px;font-size:.74rem;color:var(--warn);line-height:1.6">
+            ⚠️ <b>Indicado para uso técnico preliminar e educacional.</b><br>
+            Não substitui equipamentos geodésicos de alta precisão (RTK).
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;justify-content:space-between;font-size:.74rem">
+              <span style="color:var(--muted)">Desenvolvido por</span>
+              <span style="color:var(--text);font-weight:700">J. P. Santos</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.74rem;align-items:center">
+              <span style="color:var(--muted)">Contato</span>
+              <a href="mailto:santosjp@uft.edu.br" style="color:var(--accent);font-family:var(--mono);font-size:.68rem;text-decoration:none">santosjp@uft.edu.br</a>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.74rem">
+              <span style="color:var(--muted)">Datum / Projeção</span>
+              <span style="color:var(--text);font-family:var(--mono);font-size:.68rem">SIRGAS 2000 / UTM</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.74rem">
+              <span style="color:var(--muted)">Versão</span>
+              <span style="color:var(--text);font-family:var(--mono);font-size:.68rem">1.301</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /v-dist -->
+
   <!-- BOTTOM NAV -->
   <nav id="nav">
     <button class="nav-item active" id="nav-map" onclick="switchView('map')">
@@ -797,6 +1106,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <button class="nav-item" id="nav-export" onclick="switchView('export')">
       <span class="nav-icon">📤</span>
       <span class="nav-label">Exportar</span>
+    </button>
+    <button class="nav-item" id="nav-dist" onclick="switchView('dist')">
+      <span class="nav-icon">📏</span>
+      <span class="nav-label">Distância</span>
     </button>
   </nav>
 
@@ -842,22 +1155,22 @@ let gnssMiniCollapsed=false;
 let GS={gps:{u:0,v:0,snr:0},gal:{u:0,v:0,snr:0},glo:{u:0,v:0,snr:0},bei:{u:0,v:0,snr:0}};
 let gnssTimer=null;
 let currentView='map';
+let galileoMode=false;   // ← Galileo-only display mode
 
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
 function switchView(name){
-  ['map','dados','area','export'].forEach(v=>{
+  ['map','dados','area','export','dist'].forEach(v=>{
     document.getElementById('v-'+v)?.classList.remove('active');
     document.getElementById('nav-'+v)?.classList.remove('active');
   });
   document.getElementById('v-'+name)?.classList.add('active');
   document.getElementById('nav-'+name)?.classList.add('active');
   currentView=name;
-  // Refresh map size when returning to map
   if(name==='map'){setTimeout(()=>map&&map.invalidateSize(),50);}
-  // Refresh export summary
   if(name==='export')refreshExportSummary();
+  if(name==='dist'){refreshDistSelects();calcPathDistances();}
 }
 
 // ══════════════════════════════════════════════════════
@@ -1022,8 +1335,90 @@ function updateGNSS(){
       c.appendChild(d);
     }
   });
+  // Refresh Galileo-mode live panel if active
+  if(galileoMode) applyGalileoDisplay();
 }
-function rnd(r){return Math.random()*r;}
+// ── end updateGNSS ──
+
+// ══════════════════════════════════════════════════════
+// GALILEO MODE
+// ══════════════════════════════════════════════════════
+function toggleGalileoMode(){
+  galileoMode=!galileoMode;
+
+  // Switch element
+  const sw=document.getElementById('gal-switch');
+  sw.classList.toggle('on',galileoMode);
+
+  // Info box
+  document.getElementById('gal-info-box').classList.toggle('show',galileoMode);
+
+  // Mode title / subtitle
+  document.getElementById('gal-mode-title').textContent=galileoMode
+    ?'Modo Galileo Exclusivo Ativo'
+    :'Multi-Constelação Ativa';
+  document.getElementById('gal-mode-sub').textContent=galileoMode
+    ?'Exibindo apenas dados da constelação Galileo (EU)'
+    :'GPS + Galileo + GLONASS + BeiDou';
+
+  // Star icon
+  document.getElementById('gal-star').style.color=galileoMode?'var(--c-gal)':'var(--dim)';
+  document.getElementById('gal-star').textContent=galileoMode?'🇪🇺':'✦';
+
+  // Signal hero card accent
+  document.getElementById('sig-hero').classList.toggle('gal-mode',galileoMode);
+
+  // Dim / highlight GNSS cards in the list
+  const cards={gps:'gc-gps',gal:'gc-gal',glo:'gc-glo',bei:'gc-bei'};
+  Object.entries(cards).forEach(([k,id])=>{
+    const el=document.getElementById(id); if(!el)return;
+    if(galileoMode){
+      if(k==='gal'){el.classList.add('gal-highlighted');el.classList.remove('gal-dimmed');}
+      else{el.classList.add('gal-dimmed');el.classList.remove('gal-highlighted');}
+    }else{
+      el.classList.remove('gal-highlighted','gal-dimmed');
+    }
+  });
+
+  // GNSS mini overlay on map: dim non-Galileo rows
+  ['gps','gal','glo','bei'].forEach(k=>{
+    const row=document.querySelector(`#gm-body .gm-row:nth-child(${['gps','gal','glo','bei'].indexOf(k)+1})`);
+    if(!row)return;
+    row.style.opacity=galileoMode&&k!=='gal'?'0.3':'1';
+  });
+
+  // HUD system label
+  const hs=document.getElementById('hud-sys');
+  if(hs)hs.textContent=galileoMode?'GALILEO':'GNSS';
+
+  // Refresh live stats
+  applyGalileoDisplay();
+
+  toast(galileoMode
+    ?'🇪🇺 Modo Galileo exclusivo ativado'
+    :'🛰 Multi-constelação ativado','s');
+}
+
+function applyGalileoDisplay(){
+  if(!galileoMode)return;
+  const s=GS.gal;
+  const acc=currentPos?currentPos.acc:null;
+
+  // Live stat cells
+  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  setEl('gal-sats-live', s.u>0?`${s.u} usados`:'—');
+  setEl('gal-snr-live',  s.snr>0?s.snr+' dB':'—');
+  setEl('gal-acc-live',  acc!=null?'±'+acc.toFixed(2)+' m':'—');
+
+  // Quality bar (based on Galileo SNR)
+  const pct=s.snr>0?Math.min(100,Math.round((s.snr/55)*100)):0;
+  const bar=document.getElementById('gal-quality-bar');
+  if(bar)bar.style.width=pct+'%';
+  const ql=document.getElementById('gal-quality-label');
+  const qp=document.getElementById('gal-quality-pct');
+  if(ql)ql.textContent=pct>70?'Sinal excelente':pct>45?'Sinal bom':'Sinal fraco';
+  if(qp)qp.textContent=pct+'%';
+}
 
 // ══════════════════════════════════════════════════════
 // POINTS
@@ -1176,6 +1571,9 @@ function updatePtList(){
       </div>
       <button class="pt-del" onclick="deletePoint(${i})">✕</button>
     </div>`).join('');
+  // Keep distance tab selects in sync
+  refreshDistSelects();
+  if(currentView==='dist') calcPathDistances();
 }
 
 function refreshExportSummary(){
@@ -1333,6 +1731,94 @@ function showTutorial(){
   document.querySelectorAll('.tdot').forEach((d,i)=>d.classList.toggle('ac',i===0));
   const b=document.querySelector('.tnext');b.textContent='Próximo →';b.onclick=tutNext;
   document.getElementById('tut').style.display='flex';
+}
+
+// ══════════════════════════════════════════════════════
+// DISTANCE CALCULATOR
+// ══════════════════════════════════════════════════════
+function refreshDistSelects(){
+  const opts=points.length
+    ? points.map(p=>`<option value="${p.idx-1}">Ponto ${p.idx}  (${p.lat.toFixed(5)}, ${p.lon.toFixed(5)})</option>`).join('')
+    : '<option value="">— Nenhum ponto coletado —</option>';
+  ['dist-sel-pt','dist-a','dist-b'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    const blank=id==='dist-sel-pt'?'<option value="">— Selecione um ponto coletado —</option>':'<option value="">— Ponto —</option>';
+    el.innerHTML=blank+opts;
+  });
+}
+
+function calcDistToPoint(){
+  const sel=document.getElementById('dist-sel-pt');
+  if(!sel.value&&sel.value!=='0'){toast('Selecione um ponto','w');return;}
+  if(!currentPos){toast('Aguardando GPS...','w');return;}
+  const pt=points[parseInt(sel.value)];
+  const d=dist(currentPos,pt);
+  const el=document.getElementById('dist-to-pt');
+  const sub=document.getElementById('dist-to-pt-sub');
+  el.textContent=fmtDist(d);
+  sub.textContent=`Sua posição → Ponto ${pt.idx} · Erro pos: ±${currentPos.acc.toFixed(2)}m · ±${pt.acc.toFixed(2)}m`;
+}
+
+function calcDistAB(){
+  const ai=document.getElementById('dist-a').value;
+  const bi=document.getElementById('dist-b').value;
+  if(ai===''||bi===''){toast('Selecione os dois pontos','w');return;}
+  if(ai===bi){toast('Selecione pontos diferentes','w');return;}
+  const a=points[parseInt(ai)],b=points[parseInt(bi)];
+  const d=dist(a,b);
+  const res=document.getElementById('dist-ab-result');
+  document.getElementById('dist-ab-val').textContent=fmtDist(d);
+  document.getElementById('dist-ab-detail').textContent=
+    `Ponto ${a.idx} → Ponto ${b.idx}  |  ${d.toFixed(4)} m  |  Erro combinado: ±${(a.acc+b.acc).toFixed(2)}m`;
+  res.style.display='block';
+}
+
+function buildDistMatrix(){
+  const wrap=document.getElementById('dist-matrix');
+  if(points.length<2){
+    wrap.innerHTML='<div style="color:var(--muted);text-align:center;padding:12px">Colete ao menos 2 pontos.</div>';
+    return;
+  }
+  const n=points.length;
+  let html='<table style="width:100%;border-collapse:collapse;font-size:.6rem;font-family:var(--mono)">';
+  // Header row
+  html+='<tr><th style="padding:3px 5px;border-bottom:1px solid var(--border2);color:var(--accent)">Pt</th>';
+  for(let j=0;j<n;j++) html+=`<th style="padding:3px 5px;border-bottom:1px solid var(--border2);color:var(--accent)">P${j+1}</th>`;
+  html+='</tr>';
+  // Data rows
+  for(let i=0;i<n;i++){
+    html+=`<tr><td style="padding:3px 5px;font-weight:700;color:var(--accent);border-right:1px solid var(--border2)">P${i+1}</td>`;
+    for(let j=0;j<n;j++){
+      if(i===j){
+        html+='<td style="padding:3px 5px;color:var(--muted);text-align:center">—</td>';
+      }else{
+        const d=dist(points[i],points[j]);
+        html+=`<td style="padding:3px 5px;color:var(--text);text-align:right">${fmtDist(d)}</td>`;
+      }
+    }
+    html+='</tr>';
+  }
+  html+='</table>';
+  wrap.innerHTML=html;
+  toast('Matriz gerada','s');
+}
+
+function calcPathDistances(){
+  if(points.length<2){
+    document.getElementById('dist-open').textContent='— m';
+    document.getElementById('dist-closed').textContent='— m';
+    return;
+  }
+  let open=0;
+  for(let i=0;i<points.length-1;i++) open+=dist(points[i],points[i+1]);
+  const closed=calcPerim();
+  document.getElementById('dist-open').textContent=fmtDist(open);
+  document.getElementById('dist-closed').textContent=fmtDist(closed);
+}
+
+function fmtDist(m){
+  if(m>=1000) return (m/1000).toFixed(3)+' km';
+  return m.toFixed(2)+' m';
 }
 
 // ══════════════════════════════════════════════════════
