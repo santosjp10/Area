@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>GeoField Pro — Cálculo de Áreas GNSS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Exo+2:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --bg-deep: #080c12;
+  --bg-card: #0d1420;
+  --bg-panel: #111928;
+  --bg-ele: #182235;
+  --accent: #00e5ff;
+  --accent2: #7bed9f;
+  --accent3: #ffd32a;
+  --danger: #ff4757;
+  --warn: #ffa502;
+  --text: #e8f4f8;
+  --text-dim: #7a9bb5;
+  --text-muted: #3d5a72;
+  --border: rgba(0,229,255,0.12);
+  --border-strong: rgba(0,229,255,0.28);
+  --glow: 0 0 20px rgba(0,229,255,0.25);
+  --glow-strong: 0 0 40px rgba(0,229,255,0.4);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font-mono: 'Space Mono', monospace;
+  --font-ui: 'Exo 2', sans-serif;
+  --good: #7bed9f;
+  --ok: #ffd32a;
+  --bad: #ff4757;
+}
+.light-mode {
+  --bg-deep: #f0f4f8;
+  --bg-card: #ffffff;
+  --bg-panel: #e8eef5;
+  --bg-ele: #d8e4ef;
+  --text: #0d1420;
+  --text-dim: #3a5a7a;
+  --text-muted: #8aabb5;
+  --border: rgba(0,120,180,0.15);
+  --border-strong: rgba(0,120,180,0.35);
+  --glow: 0 2px 16px rgba(0,120,180,0.12);
+  --glow-strong: 0 4px 32px rgba(0,120,180,0.2);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg-deep);color:var(--text);font-family:var(--font-ui);}
+
+/* ── LAYOUT ── */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+#top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--bg-card);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;z-index:100;
+}
+#logo{font-size:1.15rem;font-weight:800;letter-spacing:.04em;color:var(--accent);font-family:var(--font-ui);}
+#logo span{color:var(--text-dim);font-weight:300;}
+.top-actions{display:flex;gap:8px;align-items:center;}
+.icon-btn{
+  width:38px;height:38px;border-radius:10px;border:1px solid var(--border);
+  background:var(--bg-ele);display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;cursor:pointer;transition:all .2s;color:var(--text);
+}
+.icon-btn:active{transform:scale(.92);background:var(--accent);color:#000;}
+
+#main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+
+/* ── MAP ── */
+#map-wrap{flex:1;position:relative;min-height:0;}
+#map{width:100%;height:100%;z-index:1;}
+.map-ctrl{
+  position:absolute;z-index:10;display:flex;flex-direction:column;gap:6px;right:10px;top:10px;
+}
+.map-btn{
+  width:40px;height:40px;border-radius:10px;border:1px solid var(--border-strong);
+  background:rgba(13,20,32,.88);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;cursor:pointer;color:var(--text);transition:all .2s;
+}
+.map-btn:active,.map-btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+
+/* ── BOTTOM PANEL ── */
+#bottom-panel{
+  background:var(--bg-card);border-top:1px solid var(--border);
+  flex-shrink:0;z-index:50;
+  max-height:52vh;overflow-y:auto;
+  transition:max-height .35s cubic-bezier(.4,0,.2,1);
+}
+#bottom-panel.collapsed{max-height:0;overflow:hidden;}
+
+/* ── GPS INFO BAR ── */
+#gps-bar{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  gap:2px;padding:10px 10px 4px;
+}
+.gps-cell{
+  background:var(--bg-ele);border-radius:var(--radius-sm);
+  padding:8px 10px;border:1px solid var(--border);
+}
+.gps-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:2px;}
+.gps-val{font-size:.82rem;font-weight:700;font-family:var(--font-mono);color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gps-val.ok{color:var(--good);}
+.gps-val.warn{color:var(--warn);}
+.gps-val.bad{color:var(--bad);}
+
+/* ── SIGNAL BAR ── */
+#signal-row{display:flex;align-items:center;gap:8px;padding:6px 10px 4px;}
+#signal-orb{width:12px;height:12px;border-radius:50%;background:var(--bad);box-shadow:0 0 8px var(--bad);flex-shrink:0;transition:all .4s;}
+#signal-orb.ok{background:var(--warn);box-shadow:0 0 8px var(--warn);}
+#signal-orb.good{background:var(--good);box-shadow:0 0 8px var(--good);}
+#signal-txt{font-size:.75rem;color:var(--text-dim);flex:1;}
+#precision-bar-wrap{flex:1;height:6px;background:var(--bg-ele);border-radius:3px;overflow:hidden;}
+#precision-bar{height:100%;width:0%;border-radius:3px;transition:all .5s;background:var(--bad);}
+
+/* ── TABS ── */
+#tabs{display:flex;border-bottom:1px solid var(--border);padding:0 10px;}
+.tab-btn{
+  flex:1;padding:10px 4px;font-size:.78rem;font-weight:600;
+  border:none;background:none;color:var(--text-muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;font-family:var(--font-ui);
+  letter-spacing:.03em;
+}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── TAB CONTENT ── */
+.tab-pane{display:none;padding:10px;}
+.tab-pane.active{display:block;}
+
+/* ── AREA DISPLAY ── */
+#area-hero{
+  background:linear-gradient(135deg,var(--bg-ele),var(--bg-panel));
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  padding:14px 16px;margin-bottom:10px;text-align:center;
+  box-shadow:var(--glow);
+}
+.area-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);font-family:var(--font-mono);}
+.area-val{font-size:2rem;font-weight:800;color:var(--accent);font-family:var(--font-mono);line-height:1.1;}
+.area-sub{font-size:.8rem;color:var(--text-dim);margin-top:2px;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.info-cell{background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;}
+.info-cell .label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);font-family:var(--font-mono);}
+.info-cell .val{font-size:.9rem;font-weight:700;color:var(--text);font-family:var(--font-mono);}
+
+/* ── POINTS LIST ── */
+.points-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.points-title{font-size:.8rem;font-weight:700;letter-spacing:.06em;color:var(--text-dim);}
+.pts-count{background:var(--accent);color:#000;font-size:.65rem;font-weight:800;border-radius:20px;padding:2px 7px;font-family:var(--font-mono);}
+#points-list{display:flex;flex-direction:column;gap:4px;max-height:28vh;overflow-y:auto;}
+.pt-row{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:8px 10px;transition:all .2s;
+}
+.pt-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;
+  font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:var(--font-mono);}
+.pt-coords{flex:1;}
+.pt-lat,.pt-lon{font-size:.68rem;font-family:var(--font-mono);color:var(--text);}
+.pt-lat{color:var(--accent);}
+.pt-acc{font-size:.6rem;color:var(--text-muted);font-family:var(--font-mono);}
+.pt-del{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);
+  background:none;color:var(--danger);font-size:.9rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;}
+.pt-del:active{background:var(--danger);color:#fff;}
+
+/* ── ACTION BUTTONS ── */
+#action-bar{
+  display:flex;gap:8px;padding:10px;flex-shrink:0;
+  background:var(--bg-card);border-top:1px solid var(--border);
+}
+.act-btn{
+  flex:1;padding:14px 8px;border-radius:var(--radius);border:none;
+  font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;
+  font-family:var(--font-ui);letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.act-btn:active{transform:scale(.96);}
+#btn-add{background:var(--accent);color:#000;}
+#btn-add.collecting{background:var(--danger);animation:pulse-btn 1s infinite;}
+#btn-auto{background:var(--bg-ele);color:var(--text);border:1px solid var(--border);}
+#btn-auto.active{background:var(--accent2);color:#000;border-color:var(--accent2);}
+#btn-close{background:var(--bg-ele);color:var(--text);border:1px solid var(--border);}
+#btn-close.ready{background:var(--accent3);color:#000;border-color:var(--accent3);}
+
+/* ── EXPORT TAB ── */
+.export-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.export-btn{
+  background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;
+}
+.export-btn:active{border-color:var(--accent);background:var(--bg-panel);}
+.export-icon{font-size:1.6rem;display:block;margin-bottom:4px;}
+.export-label{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text);display:block;}
+.export-sub{font-size:.6rem;color:var(--text-muted);}
+.report-btn{
+  margin-top:8px;width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),#0097a7);
+  color:#000;border:none;border-radius:var(--radius);font-size:.88rem;font-weight:800;
+  cursor:pointer;font-family:var(--font-ui);letter-spacing:.04em;transition:all .2s;
+}
+.report-btn:active{transform:scale(.97);}
+
+/* ── SETTINGS TAB ── */
+.settings-section{margin-bottom:12px;}
+.settings-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);margin-bottom:8px;font-family:var(--font-mono);}
+.setting-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:4px;}
+.setting-label{font-size:.8rem;color:var(--text);}
+.setting-sub{font-size:.65rem;color:var(--text-muted);}
+.toggle{width:44px;height:24px;border-radius:12px;background:var(--bg-panel);border:1px solid var(--border);cursor:pointer;position:relative;transition:all .3s;flex-shrink:0;}
+.toggle.on{background:var(--accent);border-color:var(--accent);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .3s;}
+.toggle.on::after{transform:translateX(20px);}
+.range-wrap{flex:1;margin-left:10px;}
+input[type=range]{width:100%;accent-color:var(--accent);}
+.range-val{font-size:.7rem;color:var(--accent);font-family:var(--font-mono);text-align:right;}
+
+/* ── UTM DISPLAY ── */
+.utm-row{background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;}
+.utm-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);font-family:var(--font-mono);}
+.utm-val{font-size:.82rem;font-family:var(--font-mono);color:var(--accent);margin-top:2px;}
+
+/* ── MODAL ── */
+#modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:500;align-items:flex-end;
+}
+#modal-overlay.show{display:flex;}
+.modal-box{
+  background:var(--bg-card);border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid var(--border-strong);width:100%;max-height:85vh;overflow-y:auto;
+  padding:20px 16px;animation:slide-up .3s ease;
+}
+.modal-title{font-size:1.1rem;font-weight:800;margin-bottom:4px;color:var(--accent);}
+.modal-sub{font-size:.75rem;color:var(--text-muted);margin-bottom:16px;}
+.modal-close{float:right;background:none;border:none;font-size:1.3rem;color:var(--text-muted);cursor:pointer;margin-top:-4px;}
+.modal-actions{display:flex;gap:8px;margin-top:16px;}
+.modal-btn{flex:1;padding:12px;border-radius:var(--radius-sm);border:none;font-size:.85rem;font-weight:700;cursor:pointer;font-family:var(--font-ui);}
+.modal-btn.primary{background:var(--accent);color:#000;}
+.modal-btn.secondary{background:var(--bg-ele);color:var(--text);border:1px solid var(--border);}
+
+/* ── TUTORIAL ── */
+#tutorial{
+  position:fixed;inset:0;z-index:600;background:rgba(8,12,18,.95);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px;
+}
+.tut-step{display:none;text-align:center;max-width:340px;}
+.tut-step.active{display:block;}
+.tut-icon{font-size:3.5rem;margin-bottom:12px;}
+.tut-title{font-size:1.3rem;font-weight:800;margin-bottom:8px;color:var(--accent);}
+.tut-text{font-size:.85rem;color:var(--text-dim);line-height:1.6;}
+.tut-dots{display:flex;gap:6px;justify-content:center;margin:20px 0;}
+.tut-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);transition:all .3s;}
+.tut-dot.active{background:var(--accent);width:20px;border-radius:4px;}
+.tut-next{background:var(--accent);color:#000;border:none;padding:14px 32px;border-radius:var(--radius);font-size:.9rem;font-weight:800;cursor:pointer;font-family:var(--font-ui);}
+
+/* ── TOAST ── */
+#toast-wrap{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:6px;pointer-events:none;width:90%;max-width:340px;}
+.toast{
+  background:var(--bg-panel);border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  padding:10px 14px;font-size:.8rem;color:var(--text);text-align:center;
+  animation:toast-in .3s ease;backdrop-filter:blur(12px);
+}
+.toast.success{border-color:var(--good);color:var(--good);}
+.toast.warn{border-color:var(--warn);color:var(--warn);}
+.toast.error{border-color:var(--bad);color:var(--bad);}
+
+/* ── PANEL HANDLE ── */
+#panel-handle{
+  width:40px;height:4px;background:var(--border-strong);border-radius:2px;
+  margin:8px auto 4px;cursor:pointer;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes pulse-btn{0%,100%{opacity:1;}50%{opacity:.7;}}
+@keyframes slide-up{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes toast-in{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fade-out{from{opacity:1;}to{opacity:0;}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.blink{animation:blink 1s infinite;}
+
+/* ── AUTO MODE INDICATOR ── */
+#auto-indicator{
+  position:absolute;top:10px;left:10px;z-index:20;
+  background:rgba(13,20,32,.9);border:1px solid var(--accent2);border-radius:var(--radius-sm);
+  padding:6px 10px;font-size:.72rem;color:var(--accent2);display:none;backdrop-filter:blur(8px);
+}
+#auto-indicator.show{display:flex;align-items:center;gap:6px;}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--bad);flex-shrink:0;animation:blink .8s infinite;}
+
+/* ── PRECISION THRESHOLD ── */
+#threshold-badge{
+  position:absolute;bottom:10px;left:10px;z-index:20;
+  background:rgba(13,20,32,.9);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:6px 10px;font-size:.7rem;color:var(--text-dim);backdrop-filter:blur(8px);
+}
+
+/* ── REPORT ── */
+#report-modal .modal-box{max-height:90vh;}
+.report-section{margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:14px;}
+.report-section:last-child{border-bottom:none;}
+.report-h{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-family:var(--font-mono);margin-bottom:8px;}
+.report-row{display:flex;justify-content:space-between;font-size:.75rem;padding:3px 0;}
+.report-row span:first-child{color:var(--text-muted);}
+.report-row span:last-child{font-family:var(--font-mono);color:var(--text);}
+.report-pt-table{width:100%;border-collapse:collapse;font-size:.65rem;font-family:var(--font-mono);}
+.report-pt-table th{color:var(--accent);text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);}
+.report-pt-table td{padding:3px 6px;color:var(--text);border-bottom:1px solid var(--border);}
+.report-pt-table tr:last-child td{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<!-- TUTORIAL -->
+<div id="tutorial">
+  <div class="tut-step active">
+    <div class="tut-icon">🛰️</div>
+    <div class="tut-title">GeoField Pro</div>
+    <div class="tut-text">Cálculo de áreas georreferenciadas com sistema GNSS Galileo. Interface profissional para uso em campo.</div>
+  </div>
+  <div class="tut-step">
+    <div class="tut-icon">📡</div>
+    <div class="tut-title">Aguarde o Sinal</div>
+    <div class="tut-text">O indicador de precisão ficará <span style="color:#7bed9f">verde</span> quando o sinal for submétrico (&lt;1m). Coleta liberada apenas com alta precisão.</div>
+  </div>
+  <div class="tut-step">
+    <div class="tut-icon">📍</div>
+    <div class="tut-title">Colete os Pontos</div>
+    <div class="tut-text">Toque em <b>+ PONTO</b> para adicionar vértices ao polígono. Use o modo <b>AUTO</b> para coleta contínua por distância.</div>
+  </div>
+  <div class="tut-step">
+    <div class="tut-icon">📐</div>
+    <div class="tut-title">Área Calculada</div>
+    <div class="tut-text">A área é calculada em tempo real. Feche o polígono e exporte em KML, GeoJSON, CSV ou gere um relatório técnico completo.</div>
+  </div>
+  <div class="tut-dots">
+    <div class="tut-dot active"></div>
+    <div class="tut-dot"></div>
+    <div class="tut-dot"></div>
+    <div class="tut-dot"></div>
+  </div>
+  <button class="tut-next" onclick="tutNext()">Próximo →</button>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div id="logo">GeoField<span>Pro</span></div>
+    <div class="top-actions">
+      <div class="icon-btn" onclick="toggleTheme()" title="Alternar tema">☀️</div>
+      <div class="icon-btn" onclick="openProjects()" title="Projetos">📁</div>
+      <div class="icon-btn" onclick="showTutorial()" title="Ajuda">❓</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main-area">
+
+    <!-- MAP -->
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div class="map-ctrl">
+        <div class="map-btn" onclick="setLayer('satellite')" title="Satélite">🛰</div>
+        <div class="map-btn" onclick="setLayer('street')" title="Rua">🗺</div>
+        <div class="map-btn" onclick="setLayer('hybrid')" title="Híbrido">🌍</div>
+        <div class="map-btn" style="margin-top:4px" onclick="centerMap()" title="Centralizar">🎯</div>
+        <div class="map-btn" onclick="clearAll()" title="Limpar" style="color:var(--danger)">🗑</div>
+      </div>
+      <div id="auto-indicator">
+        <div class="rec-dot"></div>
+        <span id="auto-txt">AUTO</span>
+      </div>
+      <div id="threshold-badge">🎯 Precisão req: &lt;1m</div>
+    </div>
+
+    <!-- BOTTOM PANEL -->
+    <div id="bottom-panel">
+      <div id="panel-handle" onclick="togglePanel()"></div>
+
+      <!-- GPS BAR -->
+      <div id="gps-bar">
+        <div class="gps-cell">
+          <div class="gps-label">Latitude</div>
+          <div class="gps-val" id="d-lat">—</div>
+        </div>
+        <div class="gps-cell">
+          <div class="gps-label">Longitude</div>
+          <div class="gps-val" id="d-lon">—</div>
+        </div>
+        <div class="gps-cell">
+          <div class="gps-label">Altitude</div>
+          <div class="gps-val" id="d-alt">—</div>
+        </div>
+      </div>
+
+      <!-- SIGNAL ROW -->
+      <div id="signal-row">
+        <div id="signal-orb"></div>
+        <div id="signal-txt">Aguardando sinal GNSS...</div>
+        <div id="precision-bar-wrap"><div id="precision-bar"></div></div>
+        <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--text-dim);margin-left:4px" id="d-acc">—</div>
+      </div>
+
+      <!-- TABS -->
+      <div id="tabs">
+        <button class="tab-btn active" onclick="showTab('tab-area')">📐 Área</button>
+        <button class="tab-btn" onclick="showTab('tab-coord')">📡 Coord</button>
+        <button class="tab-btn" onclick="showTab('tab-points')">📍 Pontos</button>
+        <button class="tab-btn" onclick="showTab('tab-export')">📤 Export</button>
+        <button class="tab-btn" onclick="showTab('tab-settings')">⚙️</button>
+      </div>
+
+      <!-- TAB: ÁREA -->
+      <div class="tab-pane active" id="tab-area">
+        <div id="area-hero">
+          <div class="area-label">Área Calculada</div>
+          <div class="area-val" id="d-area">0,00 m²</div>
+          <div class="area-sub" id="d-area-ha">0,00000 ha</div>
+        </div>
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="label">Perímetro</div>
+            <div class="val" id="d-perimeter">0,00 m</div>
+          </div>
+          <div class="info-cell">
+            <div class="label">Vértices</div>
+            <div class="val" id="d-vertices">0</div>
+          </div>
+          <div class="info-cell">
+            <div class="label">Prec. Média</div>
+            <div class="val" id="d-avg-acc">—</div>
+          </div>
+          <div class="info-cell">
+            <div class="label">Sistema Ref.</div>
+            <div class="val" style="font-size:.7rem">SIRGAS 2000</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: COORD -->
+      <div class="tab-pane" id="tab-coord">
+        <div class="utm-row">
+          <div class="utm-label">Coordenadas UTM — SIRGAS 2000</div>
+          <div class="utm-val" id="d-utm-e">E: —</div>
+          <div class="utm-val" id="d-utm-n">N: —</div>
+          <div class="utm-val" id="d-utm-zone">Zona: —</div>
+        </div>
+        <div class="utm-row">
+          <div class="utm-label">Geográficas (Graus Decimais)</div>
+          <div class="utm-val" id="d-geo-lat">Lat: —</div>
+          <div class="utm-val" id="d-geo-lon">Lon: —</div>
+        </div>
+        <div class="utm-row">
+          <div class="utm-label">DMS — Graus, Minutos, Segundos</div>
+          <div class="utm-val" id="d-dms-lat">—</div>
+          <div class="utm-val" id="d-dms-lon">—</div>
+        </div>
+      </div>
+
+      <!-- TAB: PONTOS -->
+      <div class="tab-pane" id="tab-points">
+        <div class="points-header">
+          <span class="points-title">VÉRTICES COLETADOS</span>
+          <span class="pts-count" id="pts-count-badge">0</span>
+        </div>
+        <div id="points-list"><div style="color:var(--text-muted);font-size:.78rem;text-align:center;padding:20px">Nenhum ponto coletado</div></div>
+      </div>
+
+      <!-- TAB: EXPORT -->
+      <div class="tab-pane" id="tab-export">
+        <div style="margin-bottom:8px;">
+          <label style="font-size:.75rem;color:var(--text-dim);">Identificação da Área</label>
+          <input type="text" id="area-name" placeholder="Ex: Talhão A — Fazenda São José" style="width:100%;margin-top:4px;padding:10px;background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.82rem;font-family:var(--font-ui);">
+        </div>
+        <div class="export-grid">
+          <div class="export-btn" onclick="exportKML()">
+            <span class="export-icon">🌍</span>
+            <span class="export-label">KML</span>
+            <span class="export-sub">Google Earth</span>
+          </div>
+          <div class="export-btn" onclick="exportGeoJSON()">
+            <span class="export-icon">📦</span>
+            <span class="export-label">GeoJSON</span>
+            <span class="export-sub">Web GIS / QGIS</span>
+          </div>
+          <div class="export-btn" onclick="exportCSV()">
+            <span class="export-icon">📊</span>
+            <span class="export-label">CSV</span>
+            <span class="export-sub">Tabela / Excel</span>
+          </div>
+          <div class="export-btn" onclick="shareData()">
+            <span class="export-icon">📤</span>
+            <span class="export-label">Compartilhar</span>
+            <span class="export-sub">WhatsApp / E-mail</span>
+          </div>
+        </div>
+        <button class="report-btn" onclick="generateReport()">📋 Gerar Relatório Técnico Completo</button>
+      </div>
+
+      <!-- TAB: SETTINGS -->
+      <div class="tab-pane" id="tab-settings">
+        <div class="settings-section">
+          <div class="settings-title">Coleta Automática</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Distância mín. entre pontos</div>
+              <div class="setting-sub">Somente coleta após deslocamento</div>
+            </div>
+            <div style="text-align:right">
+              <div class="range-val" id="dist-val">2 m</div>
+              <input type="range" min="1" max="20" value="2" id="dist-thresh" oninput="document.getElementById('dist-val').textContent=this.value+' m';autoDistThresh=parseInt(this.value);" style="width:100px">
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Intervalo de tempo</div>
+              <div class="setting-sub">Coleta a cada X segundos</div>
+            </div>
+            <div style="text-align:right">
+              <div class="range-val" id="time-val">5 s</div>
+              <input type="range" min="1" max="30" value="5" id="time-thresh" oninput="document.getElementById('time-val').textContent=this.value+' s';autoTimeThresh=parseInt(this.value)*1000;" style="width:100px">
+            </div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">Precisão</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Threshold de precisão</div>
+              <div class="setting-sub">Limite para coleta (m)</div>
+            </div>
+            <div style="text-align:right">
+              <div class="range-val" id="prec-val">1,0 m</div>
+              <input type="range" min="1" max="10" value="1" step="0.5" id="prec-thresh" oninput="precThresh=parseFloat(this.value);document.getElementById('prec-val').textContent=parseFloat(this.value).toFixed(1)+' m';document.getElementById('threshold-badge').textContent='🎯 Precisão req: <'+parseFloat(this.value).toFixed(1)+'m';" style="width:100px">
+            </div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">Interface</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Modo Noturno</div></div>
+            <div class="toggle on" id="toggle-dark" onclick="toggleTheme()"></div>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Som ao coletar</div></div>
+            <div class="toggle on" id="toggle-sound" onclick="toggleSetting('sound',this)"></div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-title">Projetos Salvos</div>
+          <button onclick="saveProject()" style="width:100%;padding:10px;background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.8rem;cursor:pointer;margin-bottom:4px;">💾 Salvar Projeto Atual</button>
+          <button onclick="openProjects()" style="width:100%;padding:10px;background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.8rem;cursor:pointer;">📂 Carregar Projeto</button>
+        </div>
+      </div>
+
+    </div><!-- /bottom-panel -->
+
+    <!-- ACTION BAR -->
+    <div id="action-bar">
+      <button class="act-btn" id="btn-add" onclick="addPoint()">📍 + PONTO</button>
+      <button class="act-btn" id="btn-auto" onclick="toggleAuto()">⚡ AUTO</button>
+      <button class="act-btn" id="btn-close" onclick="closePolygon()" id="btn-close">⬛ FECHAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-wrap"></div>
+
+<!-- MODAL: PROJETOS -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modal-content">
+  </div>
+</div>
+
+<!-- MODAL: RELATÓRIO -->
+<div id="report-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:510;overflow-y:auto;">
+  <div style="min-height:100%;padding:20px 14px;display:flex;align-items:flex-start;justify-content:center;">
+    <div class="modal-box" style="max-width:500px;border-radius:var(--radius);margin:auto;">
+      <button class="modal-close" onclick="document.getElementById('report-modal').style.display='none'">✕</button>
+      <div class="modal-title">📋 Relatório Técnico</div>
+      <div class="modal-sub">GNSS Galileo — SIRGAS 2000</div>
+      <div id="report-content"></div>
+      <div class="modal-actions">
+        <button class="modal-btn secondary" onclick="document.getElementById('report-modal').style.display='none'">Fechar</button>
+        <button class="modal-btn primary" onclick="printReport()">🖨️ Imprimir / PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────
+let points = [];
+let polygon = null;
+let polyline = null;
+let markers = [];
+let currentPos = null;
+let posMarker = null;
+let accuracyCircle = null;
+let watchId = null;
+let autoMode = false;
+let autoInterval = null;
+let lastAutoPos = null;
+let autoDistThresh = 2;
+let autoTimeThresh = 5000;
+let precThresh = 1.0;
+let panelOpen = true;
+let lightMode = false;
+let soundOn = true;
+let currentLayer = 'satellite';
+let sessionStart = new Date();
+let precisions = [];
+let map;
+let layers = {};
+let tutStep = 0;
+
+// ── MAP INIT ──────────────────────────────────────────
+function initMap() {
+  map = L.map('map', {
+    center: [-10, -52],
+    zoom: 4,
+    zoomControl: false,
+    attributionControl: false
+  });
+
+  layers.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:20});
+  layers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:20});
+  layers.hybrid = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:20});
+
+  layers.satellite.addTo(map);
+
+  L.control.zoom({position:'bottomright'}).addTo(map);
+}
+
+function setLayer(name) {
+  Object.values(layers).forEach(l => { try{map.removeLayer(l);}catch(e){} });
+  layers[name].addTo(map);
+  currentLayer = name;
+}
+
+// ── GPS ───────────────────────────────────────────────
+function startGPS() {
+  if (!navigator.geolocation) {
+    toast('GPS não disponível neste dispositivo', 'error');
+    return;
+  }
+  watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 15000
+  });
+}
+
+function onPos(pos) {
+  const {latitude: lat, longitude: lon, altitude: alt, accuracy: acc} = pos.coords;
+  currentPos = {lat, lon, alt, acc, ts: Date.now()};
+  updateGPSDisplay(lat, lon, alt, acc);
+  updateMapPosition(lat, lon, acc);
+  if (autoMode) handleAuto(lat, lon, acc);
+}
+
+function onErr(e) {
+  document.getElementById('signal-txt').textContent = 'Erro GPS: ' + e.message;
+  setSignalStatus('bad');
+}
+
+function updateGPSDisplay(lat, lon, alt, acc) {
+  // Decimals
+  document.getElementById('d-lat').textContent = lat.toFixed(7);
+  document.getElementById('d-lon').textContent = lon.toFixed(7);
+  document.getElementById('d-alt').textContent = alt ? alt.toFixed(1) + ' m' : 'N/D';
+  document.getElementById('d-acc').textContent = acc ? acc.toFixed(2) + ' m' : '—';
+
+  // Coord tab
+  document.getElementById('d-geo-lat').textContent = 'Lat: ' + lat.toFixed(8) + '°';
+  document.getElementById('d-geo-lon').textContent = 'Lon: ' + lon.toFixed(8) + '°';
+  document.getElementById('d-dms-lat').textContent = decToDMS(lat, 'lat');
+  document.getElementById('d-dms-lon').textContent = decToDMS(lon, 'lon');
+
+  // UTM
+  const utm = latLonToUTM(lat, lon);
+  document.getElementById('d-utm-e').textContent = 'E: ' + utm.easting.toFixed(2) + ' m';
+  document.getElementById('d-utm-n').textContent = 'N: ' + utm.northing.toFixed(2) + ' m';
+  document.getElementById('d-utm-zone').textContent = 'Zona: ' + utm.zone + utm.hemisphere;
+
+  // Signal
+  const quality = acc <= precThresh ? 'good' : acc <= 3 ? 'ok' : 'bad';
+  setSignalStatus(quality);
+  const pct = Math.max(0, Math.min(100, 100 - ((acc / 10) * 100)));
+  document.getElementById('precision-bar').style.width = pct + '%';
+  document.getElementById('precision-bar').style.background = quality === 'good' ? 'var(--good)' : quality === 'ok' ? 'var(--warn)' : 'var(--bad)';
+
+  const msgs = {good: `✅ Precisão: ${acc.toFixed(2)}m — Coleta liberada`, ok: `⚠️ Precisão: ${acc.toFixed(2)}m — Aguardando melhora`, bad: `🔴 Precisão: ${acc.toFixed(2)}m — Sinal insuficiente`};
+  document.getElementById('signal-txt').textContent = msgs[quality];
+
+  const el = document.getElementById('d-lat');
+  el.className = 'gps-val ' + quality;
+}
+
+function setSignalStatus(s) {
+  const orb = document.getElementById('signal-orb');
+  orb.className = 'signal-orb' + (s === 'good' ? ' good' : s === 'ok' ? ' ok' : '');
+  // fix: use id
+  document.getElementById('signal-orb').className = s === 'good' ? 'good' : s === 'ok' ? 'ok' : '';
+  document.getElementById('signal-orb').id = 'signal-orb';
+  const o = document.getElementById('signal-orb');
+  o.classList.remove('good','ok');
+  if(s==='good')o.classList.add('good');
+  else if(s==='ok')o.classList.add('ok');
+}
+
+function updateMapPosition(lat, lon, acc) {
+  const latlng = [lat, lon];
+  if (!posMarker) {
+    posMarker = L.circleMarker(latlng, {radius:8, color:'#00e5ff', fillColor:'#00e5ff', fillOpacity:.9, weight:2}).addTo(map);
+    accuracyCircle = L.circle(latlng, {radius:acc, color:'#00e5ff', fillColor:'#00e5ff', fillOpacity:.1, weight:1}).addTo(map);
+    map.setView(latlng, 18);
+  } else {
+    posMarker.setLatLng(latlng);
+    accuracyCircle.setLatLng(latlng);
+    accuracyCircle.setRadius(acc);
+  }
+}
+
+function centerMap() {
+  if (currentPos) map.setView([currentPos.lat, currentPos.lon], 18);
+  else toast('Aguardando posição GPS...', 'warn');
+}
+
+// ── POINT COLLECTION ──────────────────────────────────
+function addPoint(forced) {
+  if (!currentPos) { toast('Aguardando sinal GPS...', 'warn'); return; }
+  if (!forced && currentPos.acc > precThresh) {
+    toast(`Precisão insuficiente: ${currentPos.acc.toFixed(2)}m. Req: <${precThresh}m`, 'error');
+    return;
+  }
+  const pt = { ...currentPos, idx: points.length + 1 };
+  points.push(pt);
+  precisions.push(currentPos.acc);
+  addMarker(pt);
+  updatePolygon();
+  updateAreaDisplay();
+  updatePointsList();
+  if (soundOn) playBeep();
+  toast(`Ponto ${pt.idx} coletado ✓ (±${currentPos.acc.toFixed(2)}m)`, 'success');
+}
+
+function addMarker(pt) {
+  const icon = L.divIcon({
+    html: `<div style="background:var(--accent);color:#000;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:'Space Mono',monospace;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">${pt.idx}</div>`,
+    iconSize: [22, 22], iconAnchor: [11, 11], className: ''
+  });
+  const m = L.marker([pt.lat, pt.lon], {icon}).addTo(map);
+  m.bindPopup(`<b>Ponto ${pt.idx}</b><br>${pt.lat.toFixed(7)}<br>${pt.lon.toFixed(7)}<br>±${pt.acc.toFixed(2)}m`);
+  markers.push(m);
+}
+
+function updatePolygon() {
+  if (polyline) map.removeLayer(polyline);
+  if (polygon) map.removeLayer(polygon);
+  if (points.length < 2) return;
+  const coords = points.map(p => [p.lat, p.lon]);
+  polyline = L.polyline(coords, {color:'#00e5ff', weight:2.5, opacity:.85, dashArray:'6,4'}).addTo(map);
+  if (points.length >= 3) {
+    polygon = L.polygon(coords, {color:'#00e5ff', weight:2, fillColor:'#00e5ff', fillOpacity:.15}).addTo(map);
+  }
+}
+
+function closePolygon() {
+  if (points.length < 3) { toast('Mínimo 3 pontos para fechar polígono', 'warn'); return; }
+  updatePolygon();
+  const area = calcArea();
+  toast(`Polígono fechado! Área: ${formatArea(area)}`, 'success');
+  document.getElementById('btn-close').textContent = '✅ FECHADO';
+}
+
+function clearAll() {
+  if (points.length === 0) return;
+  showConfirm('Limpar todos os pontos?', 'Isso removerá todos os vértices e o polígono atual.', () => {
+    points = []; precisions = [];
+    markers.forEach(m => map.removeLayer(m)); markers = [];
+    if (polygon) map.removeLayer(polygon); polygon = null;
+    if (polyline) map.removeLayer(polyline); polyline = null;
+    updateAreaDisplay(); updatePointsList();
+    document.getElementById('btn-close').textContent = '⬛ FECHAR';
+    document.getElementById('btn-close').classList.remove('ready');
+    toast('Área limpa', 'warn');
+  });
+}
+
+// ── AUTO MODE ─────────────────────────────────────────
+function toggleAuto() {
+  autoMode = !autoMode;
+  const btn = document.getElementById('btn-auto');
+  const ind = document.getElementById('auto-indicator');
+  if (autoMode) {
+    btn.classList.add('active');
+    btn.textContent = '⏹ PARAR';
+    ind.classList.add('show');
+    lastAutoPos = null;
+    autoInterval = setInterval(() => {
+      if (currentPos && currentPos.acc <= precThresh) {
+        if (!lastAutoPos || distBetween(lastAutoPos, currentPos) >= autoDistThresh) {
+          addPoint(true);
+          lastAutoPos = {...currentPos};
+          document.getElementById('auto-txt').textContent = `AUTO · ${points.length}pts`;
+        }
+      }
+    }, autoTimeThresh);
+    toast('Modo automático ativado', 'success');
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '⚡ AUTO';
+    ind.classList.remove('show');
+    if (autoInterval) clearInterval(autoInterval);
+    toast('Modo automático desativado');
+  }
+}
+
+function handleAuto(lat, lon, acc) {/* handled by interval */}
+
+function distBetween(a, b) {
+  const R = 6371000;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+  const s = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+
+// ── AREA CALCULATION ──────────────────────────────────
+function calcArea() {
+  if (points.length < 3) return 0;
+  let area = 0;
+  const R = 6371000;
+  const pts = points.map(p => ({lat: p.lat * Math.PI / 180, lon: p.lon * Math.PI / 180}));
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    area += pts[i].lon * pts[j].lat;
+    area -= pts[j].lon * pts[i].lat;
+  }
+  const rLat = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
+  return Math.abs(area / 2) * R * R * Math.cos(rLat);
+}
+
+function calcPerimeter() {
+  if (points.length < 2) return 0;
+  let p = 0;
+  for (let i = 0; i < points.length; i++) {
+    p += distBetween(points[i], points[(i + 1) % points.length]);
+  }
+  return p;
+}
+
+function formatArea(m2) {
+  if (m2 >= 10000) return (m2 / 10000).toFixed(4) + ' ha';
+  return m2.toFixed(2) + ' m²';
+}
+
+function updateAreaDisplay() {
+  const area = calcArea();
+  const perim = calcPerimeter();
+  const ha = area / 10000;
+  document.getElementById('d-area').textContent = area.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' m²';
+  document.getElementById('d-area-ha').textContent = ha.toFixed(5) + ' ha';
+  document.getElementById('d-perimeter').textContent = perim.toFixed(2) + ' m';
+  document.getElementById('d-vertices').textContent = points.length;
+  const avgAcc = precisions.length ? (precisions.reduce((a,b)=>a+b,0)/precisions.length).toFixed(2) : '—';
+  document.getElementById('d-avg-acc').textContent = avgAcc !== '—' ? avgAcc + ' m' : '—';
+
+  if (points.length >= 3) {
+    document.getElementById('btn-close').classList.add('ready');
+  }
+}
+
+function updatePointsList() {
+  const list = document.getElementById('points-list');
+  document.getElementById('pts-count-badge').textContent = points.length;
+  if (points.length === 0) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:.78rem;text-align:center;padding:20px">Nenhum ponto coletado</div>';
+    return;
+  }
+  list.innerHTML = points.map((p, i) => `
+    <div class="pt-row" id="pt-row-${i}">
+      <div class="pt-num">${p.idx}</div>
+      <div class="pt-coords">
+        <div class="pt-lat">${p.lat.toFixed(7)}°</div>
+        <div class="pt-lon">${p.lon.toFixed(7)}°</div>
+        <div class="pt-acc">±${p.acc.toFixed(2)} m · ${new Date(p.ts).toLocaleTimeString('pt-BR')}</div>
+      </div>
+      <button class="pt-del" onclick="deletePoint(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function deletePoint(i) {
+  map.removeLayer(markers[i]);
+  markers.splice(i, 1); points.splice(i, 1); precisions.splice(i, 1);
+  // Renumber
+  points.forEach((p, idx) => { p.idx = idx + 1; });
+  markers.forEach(m => map.removeLayer(m)); markers = [];
+  points.forEach(p => addMarker(p));
+  updatePolygon(); updateAreaDisplay(); updatePointsList();
+  toast(`Ponto removido`, 'warn');
+}
+
+// ── MATH ──────────────────────────────────────────────
+function latLonToUTM(lat, lon) {
+  const k0 = 0.9996, a = 6378137, e2 = 0.00669437999014;
+  const zone = Math.floor((lon + 180) / 6) + 1;
+  const lon0 = (zone - 1) * 6 - 180 + 3;
+  const N0 = lat >= 0 ? 0 : 10000000;
+  const latR = lat * Math.PI / 180;
+  const lonR = lon * Math.PI / 180;
+  const lon0R = lon0 * Math.PI / 180;
+  const N = a / Math.sqrt(1 - e2 * Math.sin(latR) ** 2);
+  const T = Math.tan(latR) ** 2;
+  const C = (e2 / (1 - e2)) * Math.cos(latR) ** 2;
+  const A = Math.cos(latR) * (lonR - lon0R);
+  const e4 = e2 * e2, e6 = e2 ** 3;
+  const M = a * ((1 - e2/4 - 3*e4/64 - 5*e6/256)*latR
+    - (3*e2/8 + 3*e4/32 + 45*e6/1024)*Math.sin(2*latR)
+    + (15*e4/256 + 45*e6/1024)*Math.sin(4*latR)
+    - (35*e6/3072)*Math.sin(6*latR));
+  const x = k0*N*(A + (1-T+C)*A**3/6 + (5-18*T+T**2+72*C-58*(e2/(1-e2)))*A**5/120) + 500000;
+  const y = k0*(M + N*Math.tan(latR)*(A**2/2 + (5-T+9*C+4*C**2)*A**4/24 + (61-58*T+T**2+600*C-330*(e2/(1-e2)))*A**6/720)) + N0;
+  return { easting: x, northing: y, zone, hemisphere: lat >= 0 ? 'N' : 'S' };
+}
+
+function decToDMS(dec, type) {
+  const abs = Math.abs(dec);
+  const d = Math.floor(abs);
+  const mFull = (abs - d) * 60;
+  const m = Math.floor(mFull);
+  const s = ((mFull - m) * 60).toFixed(3);
+  const dir = type === 'lat' ? (dec >= 0 ? 'N' : 'S') : (dec >= 0 ? 'E' : 'O');
+  return `${d}° ${m}' ${s}" ${dir}`;
+}
+
+// ── EXPORT ────────────────────────────────────────────
+function exportKML() {
+  if (points.length < 3) { toast('Mínimo 3 pontos para exportar', 'warn'); return; }
+  const name = document.getElementById('area-name').value || 'Area_GeoField';
+  const coords = [...points, points[0]].map(p => `${p.lon},${p.lat},${p.alt||0}`).join('\n');
+  const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Placemark>
+    <name>${name}</name>
+    <description>Gerado por GeoField Pro — GNSS Galileo — ${new Date().toISOString()}</description>
+    <Style><PolyStyle><color>400000ff</color></PolyStyle><LineStyle><color>ff0000ff</color><width>2</width></LineStyle></Style>
+    <Polygon><outerBoundaryIs><LinearRing>
+      <coordinates>${coords}</coordinates>
+    </LinearRing></outerBoundaryIs></Polygon>
+  </Placemark>
+</kml>`;
+  download(kml, name + '.kml', 'application/vnd.google-earth.kml+xml');
+  toast('KML exportado!', 'success');
+}
+
+function exportGeoJSON() {
+  if (points.length < 3) { toast('Mínimo 3 pontos para exportar', 'warn'); return; }
+  const name = document.getElementById('area-name').value || 'Area_GeoField';
+  const coords = [...points, points[0]].map(p => [p.lon, p.lat]);
+  const geojson = {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      properties: { name, area_m2: calcArea().toFixed(4), area_ha: (calcArea()/10000).toFixed(6), perimeter_m: calcPerimeter().toFixed(3), datum: 'SIRGAS 2000', gnss: 'Galileo', date: new Date().toISOString(), avg_accuracy: precisions.length ? (precisions.reduce((a,b)=>a+b,0)/precisions.length).toFixed(3) : null },
+      geometry: { type: 'Polygon', coordinates: [coords] }
+    }]
+  };
+  download(JSON.stringify(geojson, null, 2), name + '.geojson', 'application/geo+json');
+  toast('GeoJSON exportado!', 'success');
+}
+
+function exportCSV() {
+  if (points.length === 0) { toast('Nenhum ponto coletado', 'warn'); return; }
+  const name = document.getElementById('area-name').value || 'Area_GeoField';
+  const utm0 = points.length ? latLonToUTM(points[0].lat, points[0].lon) : {};
+  let csv = 'Ponto;Latitude;Longitude;Altitude_m;Precisao_m;UTM_E;UTM_N;Zona;Hemisferio;Data_Hora\n';
+  points.forEach(p => {
+    const utm = latLonToUTM(p.lat, p.lon);
+    csv += `${p.idx};${p.lat.toFixed(8)};${p.lon.toFixed(8)};${p.alt?(p.alt.toFixed(2)):'N/D'};${p.acc.toFixed(3)};${utm.easting.toFixed(3)};${utm.northing.toFixed(3)};${utm.zone};${utm.hemisphere};${new Date(p.ts).toISOString()}\n`;
+  });
+  csv += `\nArea_m2;${calcArea().toFixed(4)}\nArea_ha;${(calcArea()/10000).toFixed(6)}\nPerimetro_m;${calcPerimeter().toFixed(3)}\n`;
+  download(csv, name + '.csv', 'text/csv;charset=utf-8');
+  toast('CSV exportado!', 'success');
+}
+
+function shareData() {
+  if (points.length < 3) { toast('Colete ao menos 3 pontos', 'warn'); return; }
+  const name = document.getElementById('area-name').value || 'Área GeoField';
+  const area = calcArea();
+  const text = `📍 *${name}*\n🛰️ Sistema: GNSS Galileo | SIRGAS 2000\n📐 Área: ${area.toLocaleString('pt-BR',{minimumFractionDigits:2})} m² (${(area/10000).toFixed(4)} ha)\n📏 Perímetro: ${calcPerimeter().toFixed(2)} m\n🔢 Vértices: ${points.length}\n📅 ${new Date().toLocaleString('pt-BR')}\n\n_Gerado por GeoField Pro_`;
+  if (navigator.share) {
+    navigator.share({ title: 'GeoField Pro', text }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(text).then(() => toast('Dados copiados para área de transferência', 'success'));
+  }
+}
+
+function generateReport() {
+  if (points.length < 3) { toast('Mínimo 3 pontos para gerar relatório', 'warn'); return; }
+  const name = document.getElementById('area-name').value || 'Área Sem Nome';
+  const area = calcArea();
+  const perim = calcPerimeter();
+  const avgAcc = precisions.reduce((a,b)=>a+b,0)/precisions.length;
+  const minAcc = Math.min(...precisions);
+  const now = new Date();
+
+  let ptRows = points.map(p => {
+    const utm = latLonToUTM(p.lat, p.lon);
+    return `<tr>
+      <td>${p.idx}</td>
+      <td>${p.lat.toFixed(7)}</td>
+      <td>${p.lon.toFixed(7)}</td>
+      <td>${utm.easting.toFixed(2)}</td>
+      <td>${utm.northing.toFixed(2)}</td>
+      <td>${p.acc.toFixed(3)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('report-content').innerHTML = `
+    <div class="report-section">
+      <div class="report-h">Identificação</div>
+      <div class="report-row"><span>Nome da Área</span><span>${name}</span></div>
+      <div class="report-row"><span>Data/Hora</span><span>${now.toLocaleString('pt-BR')}</span></div>
+      <div class="report-row"><span>Operador</span><span>GeoField Pro</span></div>
+    </div>
+    <div class="report-section">
+      <div class="report-h">Sistema GNSS</div>
+      <div class="report-row"><span>Sistema</span><span>Galileo / GPS</span></div>
+      <div class="report-row"><span>Datum</span><span>SIRGAS 2000</span></div>
+      <div class="report-row"><span>Projeção</span><span>UTM</span></div>
+      <div class="report-row"><span>Método</span><span>GNSS Código/Fase</span></div>
+    </div>
+    <div class="report-section">
+      <div class="report-h">Qualidade</div>
+      <div class="report-row"><span>Precisão Média</span><span>${avgAcc.toFixed(3)} m</span></div>
+      <div class="report-row"><span>Precisão Mínima</span><span>${minAcc.toFixed(3)} m</span></div>
+      <div class="report-row"><span>Número de Vértices</span><span>${points.length}</span></div>
+      <div class="report-row"><span>Threshold Configurado</span><span>${precThresh} m</span></div>
+    </div>
+    <div class="report-section">
+      <div class="report-h">Medições</div>
+      <div class="report-row"><span>Área</span><span>${area.toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4})} m²</span></div>
+      <div class="report-row"><span>Área (hectares)</span><span>${(area/10000).toFixed(6)} ha</span></div>
+      <div class="report-row"><span>Perímetro</span><span>${perim.toFixed(3)} m</span></div>
+    </div>
+    <div class="report-section">
+      <div class="report-h">Vértices</div>
+      <div style="overflow-x:auto">
+        <table class="report-pt-table">
+          <thead><tr><th>#</th><th>Latitude</th><th>Longitude</th><th>UTM E (m)</th><th>UTM N (m)</th><th>Prec (m)</th></tr></thead>
+          <tbody>${ptRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.getElementById('report-modal').style.display = 'flex';
+}
+
+function printReport() {
+  window.print();
+}
+
+function download(content, filename, mimeType) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type: mimeType}));
+  a.download = filename; a.click();
+}
+
+// ── UI HELPERS ────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  if (!panelOpen) { panelOpen = true; document.getElementById('bottom-panel').classList.remove('collapsed'); }
+}
+
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('bottom-panel').classList.toggle('collapsed', !panelOpen);
+}
+
+function toggleTheme() {
+  lightMode = !lightMode;
+  document.documentElement.classList.toggle('light-mode', lightMode);
+  const btn = document.getElementById('toggle-dark');
+  if(btn) btn.classList.toggle('on', !lightMode);
+  document.querySelectorAll('.top-actions .icon-btn')[0].textContent = lightMode ? '🌙' : '☀️';
+}
+
+function toggleSetting(key, el) {
+  if(key==='sound'){ soundOn = !soundOn; el.classList.toggle('on', soundOn); }
+}
+
+function toast(msg, type='') {
+  const w = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  w.appendChild(t);
+  setTimeout(() => { t.style.animation = 'fade-out .3s forwards'; setTimeout(() => t.remove(), 300); }, 2800);
+}
+
+function showConfirm(title, msg, cb) {
+  document.getElementById('modal-content').innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">${title}</div>
+    <div class="modal-sub">${msg}</div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeModal()">Cancelar</button>
+      <button class="modal-btn primary" onclick="closeModal();(${cb.toString()})()">Confirmar</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); }
+
+// ── PROJECTS ──────────────────────────────────────────
+function saveProject() {
+  if (points.length === 0) { toast('Nenhum ponto para salvar', 'warn'); return; }
+  const name = document.getElementById('area-name').value || ('Projeto_' + Date.now());
+  const projects = JSON.parse(localStorage.getItem('gfp_projects') || '{}');
+  projects[name] = { points, name, date: new Date().toISOString() };
+  localStorage.setItem('gfp_projects', JSON.stringify(projects));
+  toast(`Projeto "${name}" salvo!`, 'success');
+}
+
+function openProjects() {
+  const projects = JSON.parse(localStorage.getItem('gfp_projects') || '{}');
+  const keys = Object.keys(projects);
+  const list = keys.length ? keys.map(k => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--bg-ele);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:4px;">
+      <div style="flex:1">
+        <div style="font-size:.82rem;font-weight:700">${k}</div>
+        <div style="font-size:.65rem;color:var(--text-muted)">${new Date(projects[k].date).toLocaleString('pt-BR')} · ${projects[k].points.length} pts</div>
+      </div>
+      <button onclick="loadProject('${k}')" style="background:var(--accent);color:#000;border:none;padding:6px 12px;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer">Carregar</button>
+      <button onclick="delProject('${k}')" style="background:none;color:var(--danger);border:1px solid var(--danger);padding:6px 10px;border-radius:6px;font-size:.75rem;cursor:pointer">✕</button>
+    </div>`).join('') : '<div style="color:var(--text-muted);font-size:.8rem;text-align:center;padding:20px">Nenhum projeto salvo</div>';
+  document.getElementById('modal-content').innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">📁 Projetos Salvos</div>
+    <div class="modal-sub">Selecione um projeto para carregar</div>
+    ${list}`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function loadProject(k) {
+  const projects = JSON.parse(localStorage.getItem('gfp_projects') || '{}');
+  const proj = projects[k];
+  if (!proj) return;
+  clearAll_silent();
+  points = proj.points;
+  precisions = points.map(p => p.acc || 0);
+  document.getElementById('area-name').value = k;
+  markers = [];
+  points.forEach(p => addMarker(p));
+  updatePolygon(); updateAreaDisplay(); updatePointsList();
+  if(points.length) map.setView([points[0].lat, points[0].lon], 17);
+  closeModal();
+  toast(`Projeto "${k}" carregado`, 'success');
+}
+
+function delProject(k) {
+  const projects = JSON.parse(localStorage.getItem('gfp_projects') || '{}');
+  delete projects[k];
+  localStorage.setItem('gfp_projects', JSON.stringify(projects));
+  openProjects();
+  toast('Projeto removido', 'warn');
+}
+
+function clearAll_silent() {
+  points = []; precisions = [];
+  markers.forEach(m => { try{map.removeLayer(m);}catch(e){} }); markers = [];
+  if (polygon) { try{map.removeLayer(polygon);}catch(e){} polygon = null; }
+  if (polyline) { try{map.removeLayer(polyline);}catch(e){} polyline = null; }
+  updateAreaDisplay(); updatePointsList();
+}
+
+// ── SOUND ─────────────────────────────────────────────
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    o.start(); o.stop(ctx.currentTime + 0.15);
+  } catch(e) {}
+}
+
+// ── TUTORIAL ──────────────────────────────────────────
+const tutSteps = 4;
+function tutNext() {
+  tutStep++;
+  document.querySelectorAll('.tut-step').forEach((s,i) => s.classList.toggle('active', i===tutStep));
+  document.querySelectorAll('.tut-dot').forEach((d,i) => d.classList.toggle('active', i===tutStep));
+  if (tutStep >= tutSteps - 1) {
+    document.querySelector('.tut-next').textContent = '🚀 Começar';
+    document.querySelector('.tut-next').onclick = () => {
+      document.getElementById('tutorial').style.display = 'none';
+      startGPS();
+    };
+  }
+}
+
+function showTutorial() {
+  tutStep = 0;
+  document.querySelectorAll('.tut-step').forEach((s,i) => s.classList.toggle('active', i===0));
+  document.querySelectorAll('.tut-dot').forEach((d,i) => d.classList.toggle('active', i===0));
+  document.querySelector('.tut-next').textContent = 'Próximo →';
+  document.querySelector('.tut-next').onclick = tutNext;
+  document.getElementById('tutorial').style.display = 'flex';
+}
+
+// ── INIT ──────────────────────────────────────────────
+initMap();
+</script>
+</body>
+</html>
