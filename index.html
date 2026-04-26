@@ -27,8 +27,19 @@
 }
 .lm{
   --bg:#eef2f7; --card:#fff; --panel:#e4ecf4; --ele:#d4e2ef; --ele2:#c8d8e8;
-  --text:#0d1420; --dim:#3a5a7a; --muted:#8aabb5;
+  --text:#0d1420; --dim:#3a5a7a; --muted:#6a8aaa;
   --border:rgba(0,100,160,0.12); --border2:rgba(0,100,160,0.28);
+  /* Saturated but darker variants for readable contrast on white/light bg */
+  --accent:#006f8e;      /* ciano escuro — contraste AAA em branco */
+  --green:#1a7a40;       /* verde escuro — legível em claro */
+  --yellow:#7a5e00;      /* âmbar escuro — substitui amarelo neon */
+  --red:#c0192a;         /* vermelho escuro */
+  --warn:#9a5500;
+  --c-gps:#006f8e;
+  --c-gal:#1a7a40;
+  --c-glo:#a01830;
+  --c-bei:#7a5e00;
+  --glow:0 2px 12px rgba(0,100,160,0.10);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--ui);}
@@ -89,25 +100,35 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* Map itself */
 #map{position:absolute;inset:0;z-index:1;}
 
-/* GNSS mini-overlay (collapsible, top-right area below map controls) */
+/* GNSS mini-overlay — positioned BELOW the HUD strip (~62px) so it's never hidden */
 #gnss-mini{
-  position:absolute;top:10px;left:10px;z-index:20;
-  background:rgba(8,12,18,.88);border:1px solid var(--border2);border-radius:var(--r2);
-  padding:7px 9px;backdrop-filter:blur(10px);min-width:148px;
-  cursor:pointer;transition:all .3s;
+  position:absolute;top:62px;left:10px;z-index:20;
+  background:rgba(8,12,18,.90);border:1px solid var(--border2);border-radius:var(--r2);
+  padding:7px 9px;backdrop-filter:blur(10px);min-width:154px;
+  transition:all .3s;
 }
+/* Collapsed: body hidden, header shows compact "GNSS ▼ XX sats" */
 #gnss-mini.collapsed .gm-body{display:none;}
+#gnss-mini.collapsed .gm-head{margin-bottom:0;}
 #gnss-mini.collapsed{min-width:auto;}
-.gm-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.gm-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:5px;cursor:pointer;gap:6px;user-select:none;
+}
 .gm-title{font-size:.52rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-family:var(--mono);}
-.gm-toggle{font-size:.6rem;color:var(--dim);}
+.gm-toggle{
+  font-size:.68rem;color:var(--accent);font-weight:700;
+  background:rgba(0,229,255,.12);border-radius:4px;padding:1px 5px;
+  transition:transform .25s;
+}
+#gnss-mini.collapsed .gm-toggle{transform:rotate(180deg);}
 .gm-row{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
 .gm-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .gm-name{font-size:.6rem;font-family:var(--mono);color:var(--dim);width:50px;flex-shrink:0;}
 .gm-bwrap{flex:1;height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;}
 .gm-bfill{height:100%;border-radius:2px;transition:width .6s;}
 .gm-val{font-size:.65rem;font-weight:700;font-family:var(--mono);width:24px;text-align:right;flex-shrink:0;}
-.gm-total{margin-top:4px;padding-top:4px;border-top:1px solid var(--border);display:flex;justify-content:space-between;}
+.gm-total{margin-top:4px;padding-top:4px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
 .gm-tl{font-size:.52rem;color:var(--muted);font-family:var(--mono);}
 .gm-tv{font-size:.72rem;font-weight:800;font-family:var(--mono);color:var(--accent);}
 
@@ -163,12 +184,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #fab-close.rdy{background:var(--yellow);color:#000;border-color:var(--yellow);}
 .fab-icon{font-size:1rem;}
 
-/* Area chip on map */
+/* Area chip on map — floats top-right, below HUD */
 #area-chip{
-  position:absolute;top:58px;right:10px;z-index:20;
+  position:absolute;top:62px;right:10px;z-index:20;
   background:rgba(8,12,18,.9);border:1px solid var(--border2);
   border-radius:var(--r2);padding:6px 10px;backdrop-filter:blur(8px);
-  text-align:right;min-width:110px;
+  text-align:right;min-width:110px;pointer-events:none;
 }
 .ac-label{font-size:.52rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono);}
 .ac-val{font-size:.9rem;font-weight:800;font-family:var(--mono);color:var(--accent);line-height:1.2;}
@@ -208,19 +229,76 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .sh-bar{height:100%;border-radius:4px;transition:width .5s;}
 .sh-thresh{font-size:.58rem;color:var(--muted);font-family:var(--mono);margin-top:4px;}
 
-/* Coord section */
+/* ── LIGHT MODE SPECIFIC OVERRIDES ─────────────────
+   These override inline style-colors that use --c-* vars
+   and neon-based text classes that become unreadable on white.
+──────────────────────────────────────────────── */
+/* Section titles in light mode: use --accent which is now dark teal */
+/* (already handled via CSS var override in .lm) */
+
+/* Signal hero accuracy text — ensure it's bold enough in all states */
+.sh-acc{font-size:1.6rem;font-weight:900;font-family:var(--mono);color:var(--accent);}
+.sh-acc.ok{color:var(--yellow);}     /* now dark amber in light mode */
+.sh-acc.good{color:var(--green);}    /* now dark green in light mode */
+.sh-acc.bad{color:var(--red);}       /* now dark red in light mode */
+
+/* Error stat value texts — inherit color from inline style (--green/--yellow/--red),
+   which are already overridden in .lm. No extra rule needed.
+   But the ep-label and ep-val font-weight ensures legibility: */
+.ep-label{font-size:.6rem;font-family:var(--mono);width:58px;flex-shrink:0;font-weight:700;}
+.ep-val{font-size:.66rem;font-family:var(--mono);width:50px;text-align:right;flex-shrink:0;font-weight:800;}
+
+/* HUD strip on map: always dark regardless of theme (map overlay) */
+#hud{background:linear-gradient(to bottom,rgba(8,12,18,.92) 70%,transparent);}
+#hud-lat{color:#00e5ff;}  /* always bright on dark HUD */
+#hud-lon{color:rgba(180,210,225,.85);}
+
+/* GNSS mini: always dark panel on the map, independent of theme */
+#gnss-mini{background:rgba(8,12,18,.90) !important;color:#e8f4f8 !important;}
+#gnss-mini .gm-title{color:rgba(180,210,225,.7) !important;}
+#gnss-mini .gm-name{color:rgba(180,210,225,.8) !important;}
+#gnss-mini .gm-tl{color:rgba(100,140,170,.8) !important;}
+#gnss-mini .gm-toggle{color:#00e5ff !important;background:rgba(0,229,255,.12) !important;}
+
+/* prec-badge and auto-ind: also always dark (map overlays) */
+#prec-badge,#auto-ind{color:rgba(180,210,225,.9);}
+#prec-badge.good{color:#7bed9f !important;}
+#prec-badge.ok{color:#ffd32a !important;}
+#prec-badge.bad{color:#ff4757 !important;}
+
+/* Points list: the lat value in accent color; ensure readable */
+.pt-ll{font-size:.68rem;font-family:var(--mono);color:var(--accent);font-weight:700;}
+.pt-ll span{color:var(--dim);}
+
+/* Nav label in light mode: use stronger text */
+.lm .nav-item{color:var(--muted);}
+.lm .nav-item.active{color:var(--accent);}
+.lm .nav-item.active::after{background:var(--accent);}
+
+/* Coord values — use --accent (dark teal in light, bright cyan in dark) */
+.cc-val,.cf-val{color:var(--accent);}
+
+/* GNSS card name text color: uses inline style var, already overridden in .lm */
+/* gc-count also uses inline style, fine */
+
+/* Area value */
+.arh-val{color:var(--accent);}
+.asg-v.hi{color:var(--accent);}
+.ac-val{color:#00e5ff;}  /* chip is always on dark map overlay — keep neon */
+/* Ensure signal orb on nav always visible */
+
+/* ── COORD SECTION ── */
 .section-title{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-family:var(--mono);margin-bottom:7px;display:flex;align-items:center;gap:8px;}
 .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
 .coord-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .coord-cell{background:var(--ele);border:1px solid var(--border);border-radius:var(--r2);padding:9px 11px;}
 .cc-label{font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono);}
-.cc-val{font-size:.82rem;font-weight:700;font-family:var(--mono);color:var(--accent);margin-top:3px;word-break:break-all;}
 .cc-sub{font-size:.62rem;color:var(--dim);margin-top:1px;}
 .coord-full{background:var(--ele);border:1px solid var(--border);border-radius:var(--r2);padding:9px 11px;}
 .cf-label{font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--mono);margin-bottom:4px;}
 .cf-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;}
 .cf-key{font-size:.65rem;color:var(--dim);}
-.cf-val{font-size:.78rem;font-family:var(--mono);color:var(--accent);font-weight:700;}
+
 
 /* GNSS detail cards */
 .gnss-card{background:var(--ele);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;}
@@ -414,10 +492,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <!-- Map -->
     <div id="map"></div>
 
-    <!-- GNSS mini overlay -->
-    <div id="gnss-mini" onclick="toggleGnssMini()">
-      <div class="gm-head">
-        <span class="gm-title">Constelações</span>
+    <!-- GNSS mini overlay — click the header to expand/collapse -->
+    <div id="gnss-mini">
+      <div class="gm-head" onclick="toggleGnssMini()">
+        <span class="gm-title">🛰 Constelações GNSS</span>
         <span class="gm-toggle" id="gm-tog">▲</span>
       </div>
       <div class="gm-body" id="gm-body">
@@ -425,7 +503,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         <div class="gm-row"><div class="gm-dot" style="background:var(--c-gal)"></div><span class="gm-name">Galileo</span><div class="gm-bwrap"><div class="gm-bfill" id="gmb-gal" style="background:var(--c-gal);width:0%"></div></div><span class="gm-val" id="gmv-gal" style="color:var(--c-gal)">—</span></div>
         <div class="gm-row"><div class="gm-dot" style="background:var(--c-glo)"></div><span class="gm-name">GLONASS</span><div class="gm-bwrap"><div class="gm-bfill" id="gmb-glo" style="background:var(--c-glo);width:0%"></div></div><span class="gm-val" id="gmv-glo" style="color:var(--c-glo)">—</span></div>
         <div class="gm-row"><div class="gm-dot" style="background:var(--c-bei)"></div><span class="gm-name">BeiDou</span><div class="gm-bwrap"><div class="gm-bfill" id="gmb-bei" style="background:var(--c-bei);width:0%"></div></div><span class="gm-val" id="gmv-bei" style="color:var(--c-bei)">—</span></div>
-        <div class="gm-total"><span class="gm-tl">Total</span><span class="gm-tv" id="gmv-tot">—</span></div>
+        <div class="gm-total"><span class="gm-tl">Total sats</span><span class="gm-tv" id="gmv-tot">—</span></div>
       </div>
     </div>
 
@@ -798,6 +876,7 @@ function centerMap(){if(currentPos)map.setView([currentPos.lat,currentPos.lon],1
 function toggleGnssMini(){
   gnssMiniCollapsed=!gnssMiniCollapsed;
   document.getElementById('gnss-mini').classList.toggle('collapsed',gnssMiniCollapsed);
+  // ▲ = expanded (body visible), ▼ = collapsed (body hidden)
   document.getElementById('gm-tog').textContent=gnssMiniCollapsed?'▼':'▲';
 }
 
